@@ -35,6 +35,9 @@
  * ***** END LICENSE BLOCK ***** */
 
 var FastPrevNext = {
+	PREV: -1,
+	NEXT: 1,
+
 	log: Components.utils.reportError,
 
 	get content() { return document.getElementById('content'); },
@@ -66,11 +69,22 @@ var FastPrevNext = {
 
 	onMouseEnterUrlbar: function() FastPrevNext.checkEnable(),
 	checkEnable: function() {
+		this.enabled = this.checkEnableMetaLinks()
+			|| this.checkEnableURIMatching();
+	},
+	checkEnableMetaLinks: function() {
+		let links = content.document.getElementsByTagName('link');
+		return Array.some(
+			links,
+			function(e) ['next', 'previous'].indexOf(rel) != -1
+			);
+	},
+	checkEnableURIMatching: function() {
 		if (!this.content.webNavigation || !this.content.webNavigation.currentURI) {
 			return;
 		}
 		let match = this.content.webNavigation.currentURI.spec.match(this._pattern);
-		this.enabled = match != null && parseInt(match[1], 10) > 0;
+		return match != null && parseInt(match[1], 10) > 0;
 	},
 
 	// XXX: post-processing (error fixups) not implemented
@@ -88,17 +102,33 @@ var FastPrevNext = {
 		}
 	},
 
+	destUrl: function(dir) {
+		if (this.checkEnableMetaLinks()) {
+			let links = content.document.getElementsByTagName('link');
+			for (var i in links) {
+				if ((dir == this.NEXT && links[i].rel == 'next')
+						|| (dir == this.PREV && links[i].rel == 'previous'))
+					return links[i].href;
+			}
+		}
+		else if (this.checkEnableURIMatching()) {
+			let nav = this.content.webNavigation;
+			let spec = nav.currentURI.spec;
+			let m = spec.match(this._pattern);
+			num = parseInt(m[1], 10) + dir;
+			num = this._buildNum(num, m[1].length);
+			return spec.replace(this._pattern, num + '$2');
+		}
+
+		return "";
+	},
+
 	_move: function(v, newTab) {
 		try {
 			let cnt = this.content;
 			let nav = cnt.webNavigation;
-			let spec = nav.currentURI.spec;
-			let m = spec.match(this._pattern);
-			if (!m) {
-				return;
-			}
-			let num = this._buildNum(parseInt(m[1], 10) + v, m[1].length);
-			spec = spec.replace(this._pattern, num + '$2');
+
+			let spec = this.destUrl(v);
 
 			if (newTab) {
 				this.openNewTab(spec, nav.referringURI);
@@ -115,16 +145,17 @@ var FastPrevNext = {
 					}
 				}
 			}
-			this._goto(spec, num, cnt.selectedBrowser);
+			this._goto(spec, cnt.selectedBrowser);
 		}
 		catch (ex) {
 			this.log(ex);
 		}
 	},
 
-	_goto: function(spec, num, browser) {
+	_goto: function(spec, browser) {
 		// when we have a leading zero then we may later want to re-try without it.
-		if (num.match(/^0/)) {
+		let m = spec.match(this._pattern);
+		if (!this.checkEnableMetaLinks() && m[1].match(/^0/)) {
 			let now = Date.now();
 
 			// some garbage collection
