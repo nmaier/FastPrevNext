@@ -47,6 +47,8 @@
 			insertbefore="star-button"
 			tooltiptext="&fastprevnext.prev;"
 			onclick="FastPrevNext.prev(event);"
+			onmouseover="FastPrevNext.previewUrl(event, FastPrevNext.PREV);"
+			onmouseout="FastPrevNext.unpreviewUrl(event, FastPrevNext.PREV);"
 		/>
 		<image
 			id="FastPrevNextNext"
@@ -55,6 +57,8 @@
 			insertbefore="star-button"
 			tooltiptext="&fastprevnext.next;"
 			onclick="FastPrevNext.next(event);"
+			onmouseover="FastPrevNext.previewUrl(event, FastPrevNext.NEXT);"
+			onmouseout="FastPrevNext.unpreviewUrl(event, FastPrevNext.NEXT);"
 		/>
 	</hbox>
 </overlay>

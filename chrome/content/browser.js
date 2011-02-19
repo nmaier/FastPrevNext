@@ -152,6 +152,19 @@ var FastPrevNext = {
 		}
 	},
 
+	previewUrl: function(event, dest) {
+		if (!XULBrowserWindow) {
+			return;
+		}
+		XULBrowserWindow.setOverLink(this.destUrl(dest), null);
+	},
+	unpreviewUrl: function(event, dest) {
+		if (!XULBrowserWindow) {
+			return;
+		}
+		XULBrowserWindow.setOverLink("", null);
+	},
+
 	_goto: function(spec, browser) {
 		// when we have a leading zero then we may later want to re-try without it.
 		let m = spec.match(this._pattern);
