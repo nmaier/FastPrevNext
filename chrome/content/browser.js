@@ -70,7 +70,7 @@ var FastPrevNext = {
 	onMouseEnterUrlbar: function() FastPrevNext.checkEnable(),
 	checkEnable: function() {
 		this.enabled = this.checkEnableMetaLinks()
-			|| this.checkEnableURIMatching();
+			|| this.checkEnableURIMatching();
 	},
 	checkEnableMetaLinks: function() {
 		let links = content.document.querySelectorAll('head > link');
