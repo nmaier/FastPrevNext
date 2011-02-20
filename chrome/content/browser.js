@@ -73,7 +73,7 @@ var FastPrevNext = {
 			|| this.checkEnableURIMatching();
 	},
 	checkEnableMetaLinks: function() {
-		let links = content.document.getElementsByTagName('link');
+		let links = content.document.querySelectorAll('head > link');
 		return Array.some(
 			links,
 			function(e) ['next', 'previous'].indexOf(rel) != -1
@@ -104,7 +104,7 @@ var FastPrevNext = {
 
 	destUrl: function(dir) {
 		if (this.checkEnableMetaLinks()) {
-			let links = content.document.getElementsByTagName('link');
+			let links = content.document.querySelectorAll('head > link');
 			for (var i in links) {
 				if ((dir == this.NEXT && links[i].rel == 'next')
 						|| (dir == this.PREV && links[i].rel == 'previous'))
