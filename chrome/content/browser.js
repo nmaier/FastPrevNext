@@ -36,6 +36,7 @@
 
 var FastPrevNext = {
 	PREV: -1,
+	CLEAR: 0,
 	NEXT: 1,
 
 	log: Components.utils.reportError,
@@ -152,17 +153,13 @@ var FastPrevNext = {
 		}
 	},
 
-	previewUrl: function(event, dest) {
+	setPreviewLink: function(event, dest) {
 		if (!XULBrowserWindow) {
 			return;
 		}
-		XULBrowserWindow.setOverLink(this.destUrl(dest), null);
-	},
-	unpreviewUrl: function(event, dest) {
-		if (!XULBrowserWindow) {
-			return;
-		}
-		XULBrowserWindow.setOverLink("", null);
+		XULBrowserWindow.setOverLink(
+			dest ? this.destUrl(dest) : "",
+			null);
 	},
 
 	_goto: function(spec, browser) {
@@ -236,9 +233,28 @@ var FastPrevNext = {
 
 // add this so that we can later post-process
 (function() {
-		addEventListener('DOMContentLoaded', FastPrevNext.load, true);
-		addEventListener('load', function() {
-			removeEventListener('load', arguments.callee, false);
-			FastPrevNext.urlbar.addEventListener('mousemove', FastPrevNext.onMouseEnterUrlbar, true);
-		}, false);
+	function $(id) document.getElementById(id);
+	
+	addEventListener('DOMContentLoaded', FastPrevNext.load, true);
+	addEventListener('load', function() {
+		removeEventListener('load', arguments.callee, false);
+		FastPrevNext.urlbar.addEventListener('mousemove', FastPrevNext.onMouseEnterUrlbar, true);
+	
+		function wire(item) {
+			let lItem = item.toLowerCase();
+			let uItem = item.toUpperCase();
+			let node = $('FastPrevNext' + item);
+			node.addEventListener("click", function(event) {
+				FastPrevNext[lItem](event);
+			}, true);
+			node.addEventListener("mouseover", function(event) {
+				FastPrevNext.setPreviewLink(event, FastPrevNext[uItem]);
+			}, true);
+			node.addEventListener("mouseout", function(event) {
+				FastPrevNext.setPreviewLink(event, FastPrevNext.CLEAR);
+			}, true);
+		}
+		wire('Prev');
+		wire('Next');
+	}, false);
 })();
