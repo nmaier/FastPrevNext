@@ -44,7 +44,7 @@
 			id="FastPrevNextPrev"
 			style="-moz-user-focus: none;"
 			class="plain urlbar-icon fastprevnextbutton"
-			insertbefore="feed-button"
+			insertbefore="star-button"
 			tooltiptext="&fastprevnext.prev;"
 			onclick="FastPrevNext.prev(event);"
 		/>
@@ -52,7 +52,7 @@
 			id="FastPrevNextNext"
 			style="-moz-user-focus: none;"
 			class="plain urlbar-icon fastprevnextbutton"
-			insertbefore="feed-button"
+			insertbefore="star-button"
 			tooltiptext="&fastprevnext.next;"
 			onclick="FastPrevNext.next(event);"
 		/>
