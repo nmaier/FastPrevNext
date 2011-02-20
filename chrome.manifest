@@ -1,0 +1,6 @@
+content	fastprevnext					chrome/content/
+skin	fastprevnext	classic/1.0		chrome/skin/
+locale	fastprevnext	en-US			chrome/locale/en-US/
+
+overlay	chrome://browser/content/browser.xul	chrome://fastprevnext/content/browser.xul
+style	chrome://browser/content/browser.xul	chrome://fastprevnext/skin/browser.css
