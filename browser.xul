@@ -41,7 +41,7 @@
     addEventListener("load", function() {
       removeEventListener("load", arguments.callee, false);
       let _s = {};
-      Components.utils.import("resource://fastprevnext/browser.js", _s);
+      Components.utils.import("resource://fastprevnext/browser.jsm", _s);
       _s.main(window);
      }, false);
   ]]></script>
