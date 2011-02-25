@@ -20,7 +20,7 @@
    - the Initial Developer. All Rights Reserved.
    -
    - Contributor(s):
-   -	Nils Maier <MaierMan@web.de>
+   -  Nils Maier <MaierMan@web.de>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -37,30 +37,30 @@
    - ***** END LICENSE BLOCK ***** -->
 <!DOCTYPE overlay SYSTEM "chrome://fastprevnext/locale/browser.dtd">
 <overlay id="FastPrevNextOverlay" xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
-	<script type="application/x-javascript"><![CDATA[
-		addEventListener("load", function() {
-			removeEventListener("load", arguments.callee, false);
-			let _s = {};
-			Components.utils.import("resource://fastprevnext/browser.js", _s);
-			_s.main(window);
-		 }, false);
-	]]></script>
-	
-	<hbox id="urlbar-icons">
-		<image
-			id="FastPrevNextPrev"
-			style="-moz-user-focus: none;"
-			class="plain urlbar-icon fastprevnextbutton"
-			insertbefore="star-button"
-			tooltiptext="&fastprevnext.prev;"
-		/>
-		<image
-			id="FastPrevNextNext"
-			style="-moz-user-focus: none;"
-			class="plain urlbar-icon fastprevnextbutton"
-			insertbefore="star-button"
-			tooltiptext="&fastprevnext.next;"
-		/>
-	</hbox>
-</overlay>
+  <script type="application/x-javascript"><![CDATA[
+    addEventListener("load", function() {
+      removeEventListener("load", arguments.callee, false);
+      let _s = {};
+      Components.utils.import("resource://fastprevnext/browser.js", _s);
+      _s.main(window);
+     }, false);
+  ]]></script>
  
+  <hbox id="urlbar-icons">
+    <image
+      id="FastPrevNextPrev"
+      style="-moz-user-focus: none;"
+      class="plain urlbar-icon fastprevnextbutton"
+      insertbefore="star-button"
+      tooltiptext="&fastprevnext.prev;"
+    />
+    <image
+      id="FastPrevNextNext"
+      style="-moz-user-focus: none;"
+      class="plain urlbar-icon fastprevnextbutton"
+      insertbefore="star-button"
+      tooltiptext="&fastprevnext.next;"
+    />
+  </hbox>
+</overlay>
+
