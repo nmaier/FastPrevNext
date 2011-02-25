@@ -229,10 +229,10 @@ function main(window) {
     moveTo(PREV, evt.button == 1);
   }
 
-  window.addEventListener('DOMContentLoaded', loadPage, true);
-  urlbar.addEventListener('mousemove', checkEnable, true);
+  content.addEventListener("load", loadPage, true);
+  urlbar.addEventListener("mousemove", checkEnable, true);
 
-  let node = $('FastPrevNextPrev');
+  let node = $("FastPrevNextPrev");
   node.addEventListener("click", movePrev, true);
   node.addEventListener(
     "mouseover",
@@ -244,7 +244,7 @@ function main(window) {
     function(event) setPreviewLink(event, CLEAR),
     true
     );
-  node = $('FastPrevNextNext');
+  node = $("FastPrevNextNext");
   node.addEventListener("click", moveNext, true);
   node.addEventListener(
     "mouseover",
