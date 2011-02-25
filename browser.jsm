@@ -146,7 +146,7 @@ function main(window) {
       return;
     }
     XULBrowserWindow.setOverLink(
-      dest ? getDestUrl(dir) : "",
+      dir ? getDestUrl(dir) : "",
       null);
   }
 
