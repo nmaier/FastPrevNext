@@ -1,4 +1,5 @@
-content	fastprevnext .
+content fastprevnext .
+resource fastprevnext .
 skin fastprevnext classic/1.0 .
 locale fastprevnext en-US locale/en-US/
 locale fastprevnext de locale/de/

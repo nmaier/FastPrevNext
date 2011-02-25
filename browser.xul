@@ -37,7 +37,14 @@
    - ***** END LICENSE BLOCK ***** -->
 <!DOCTYPE overlay SYSTEM "chrome://fastprevnext/locale/browser.dtd">
 <overlay id="FastPrevNextOverlay" xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
-	<script type="application/x-javascript" src="chrome://fastprevnext/content/browser.js" />
+	<script type="application/x-javascript"><![CDATA[
+		addEventListener("load", function() {
+			removeEventListener("load", arguments.callee, false);
+			let _s = {};
+			Components.utils.import("resource://fastprevnext/browser.js", _s);
+			_s.main(window);
+		 }, false);
+	]]></script>
 	
 	<hbox id="urlbar-icons">
 		<image

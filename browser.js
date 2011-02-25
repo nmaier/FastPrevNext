@@ -34,227 +34,227 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-var FastPrevNext = {
-	PREV: -1,
-	CLEAR: 0,
-	NEXT: 1,
+const EXPORTED_SYMBOLS = ['main'];
 
-	log: Components.utils.reportError,
+const Cc = Components.classes;
+const Ci = Components.interfaces;
+const Cu = Components.utils;
+const module = Cu.import;
+const log = Cu.reportError;
 
-	get content() { return document.getElementById('content'); },
-	get urlbar() { return document.getElementById('urlbar'); },
+const PREV = -1;
+const CLEAR = 0;
+const NEXT = 1;
 
-	_pattern: /(\d+)([^\d]*?)$/,
-	_flags: Ci.nsIWebNavigation.LOAD_FLAGS_NONE,
-	_known: {},
+const RE_NUMERIC = /(\d+)([^\d]*?)$/;
+const LOAD_FLAGS = Ci.nsIWebNavigation.LOAD_FLAGS_NONE;
 
-	_buildNum: function(rv, digits) {
-		rv = rv.toString();
-		if (typeof(digits) != 'number') {
-			digits = 3;
-		}
-		while (rv.length < digits) {
-			rv = '0' + rv;
-		}
-		return rv;
-	},
+function buildNum(rv, digits) {
+  rv = rv.toString();
+  if (typeof(digits) != 'number') {
+    digits = 3;
+  }
+  while (rv.length < digits) {
+    rv = '0' + rv;
+  }
+  return rv;
+}
 
-	get enabled() {
-		return this.urlbar.hasAttribute('_FastPrevNext_enabled') && this.urlbar.getAttribute('_FastPrevNext_enabled');
-	},
-	set enabled(nv) {
-		nv = !!nv;
-		this.urlbar.setAttribute('_FastPrevNext_enabled', nv.toString());
-		return nv;
-	},
+function main(window) {
+  let known = {};
 
-	onMouseEnterUrlbar: function() FastPrevNext.checkEnable(),
-	checkEnable: function() {
-		this.enabled = this.checkEnableMetaLinks()
-			|| this.checkEnableURIMatching();
-	},
-	checkEnableMetaLinks: function() {
-		let links = content.document.querySelectorAll('head > link');
-		return Array.some(
-			links,
-			function(e) ['next', 'previous'].indexOf(rel) != -1
-			);
-	},
-	checkEnableURIMatching: function() {
-		if (!this.content.webNavigation || !this.content.webNavigation.currentURI) {
-			return;
-		}
-		let match = this.content.webNavigation.currentURI.spec.match(this._pattern);
-		return match != null && parseInt(match[1], 10) > 0;
-	},
+  let document = window.document;
+  let XULBrowserWindow = window.XULBrowserWindow;
 
-	// XXX: post-processing (error fixups) not implemented
-	openNewTab: function(link, ref) {
-		try {
-			if ('delayedOpenTab' in window) {
-				window.delayedOpenTab(link, ref);
-				return;
-			}
-			window.getBrowser().addTab(link, ref);
-			return;
-		}
-		catch (ex) {
-			this.log("failed to open link" + ex);
-		}
-	},
+  function $(id) document.getElementById(id);
+  let urlbar = $('urlbar');
+  let content = $('content');
 
-	destUrl: function(dir) {
-		if (this.checkEnableMetaLinks()) {
-			let links = content.document.querySelectorAll('head > link');
-			for (var i in links) {
-				if ((dir == this.NEXT && links[i].rel == 'next')
-						|| (dir == this.PREV && links[i].rel == 'previous'))
-					return links[i].href;
-			}
-		}
-		else if (this.checkEnableURIMatching()) {
-			let nav = this.content.webNavigation;
-			let spec = nav.currentURI.spec;
-			let m = spec.match(this._pattern);
-			num = parseInt(m[1], 10) + dir;
-			num = this._buildNum(num, m[1].length);
-			return spec.replace(this._pattern, num + '$2');
-		}
+  function setEnabled(nv) {
+    nv = !!nv;
+    urlbar.setAttribute('_FastPrevNext_enabled', nv.toString());
+  }
 
-		return "";
-	},
+  function checkEnableMetaLinks() {
+    let links = content.contentDocument.querySelectorAll('head > link');
+    return Array.some(
+      links,
+      function(e) ['next', 'previous'].indexOf(e.rel) != -1
+      );
+  }
+  function checkEnableURIMatching() {
+    if (!content.webNavigation || !content.webNavigation.currentURI) {
+      return;
+    }
+    let match = content.webNavigation.currentURI.spec.match(RE_NUMERIC);
+    return match != null && parseInt(match[1], 10) > 0;
+  }
+  function checkEnable() setEnabled(checkEnableMetaLinks() || checkEnableURIMatching());
 
-	_move: function(v, newTab) {
-		try {
-			let cnt = this.content;
-			let nav = cnt.webNavigation;
+  // XXX: post-processing (error fixups) not implemented
+  function openNewTab(link, ref) {
+    try {
+      if ('delayedOpenTab' in window) {
+        window.delayedOpenTab(link, ref);
+        return;
+      }
+      window.getBrowser().addTab(link, ref);
+      return;
+    }
+    catch (ex) {
+      log("failed to open link" + ex);
+    }
+  }
+  function setPreviewLink(event, dest) {
+    if (!XULBrowserWindow) {
+      return;
+    }
+    XULBrowserWindow.setOverLink(
+      dest ? getDestUrl(dest) : "",
+      null);
+  }
 
-			let spec = this.destUrl(v);
+  function getDestUrl(dir) {
+    let links = content.contentDocument.querySelectorAll('head > link');
+    for (var i in links) {
+      if ((dir == NEXT && links[i].rel == 'next')
+          || (dir == PREV && links[i].rel == 'previous'))
+        return links[i].href;
+    }
 
-			if (newTab) {
-				this.openNewTab(spec, nav.referringURI);
-				return;
-			}
+    let nav = content.webNavigation;
+    let spec = nav.currentURI.spec;
+    let m = spec.match(RE_NUMERIC);
+    if (!m) {
+      return null;
+    }
+    num = parseInt(m[1], 10) + dir;
+    num = buildNum(num, m[1].length);
+    return spec.replace(RE_NUMERIC, num + '$2');
+  }
 
-			let sh = nav.sessionHistory;
-			if (sh && sh.count > 1) {
-				for (let i = sh.count - 1; i >= 0; --i) {
-					let entry = sh.getEntryAtIndex(i, false);
-					if (entry && entry.URI.spec == spec) {
-						nav.gotoIndex(i);
-						return;
-					}
-				}
-			}
-			this._goto(spec, cnt.selectedBrowser);
-		}
-		catch (ex) {
-			this.log(ex);
-		}
-	},
+  function moveTo(v, newTab) {
+    try {
+      let nav = content.webNavigation;
 
-	setPreviewLink: function(event, dest) {
-		if (!XULBrowserWindow) {
-			return;
-		}
-		XULBrowserWindow.setOverLink(
-			dest ? this.destUrl(dest) : "",
-			null);
-	},
+      let spec = getDestUrl(v);
+      if (!spec) {
+        return;
+      }
 
-	_goto: function(spec, browser) {
-		// when we have a leading zero then we may later want to re-try without it.
-		let m = spec.match(this._pattern);
-		if (!this.checkEnableMetaLinks() && m[1].match(/^0/)) {
-			let now = Date.now();
+      if (newTab) {
+        openNewTab(spec, nav.referringURI);
+        return;
+      }
 
-			// some garbage collection
-			let cut = now - 900;
-			for (let x in this._known) {
-				if (this._known[x][2] < cut) {
-					delete this._known[x][2];
-				}
-			}
+      // Find in history
+      let sh = nav.sessionHistory;
+      if (sh && sh.count > 1) {
+        for (let i = sh.count - 1; i >= 0; --i) {
+          let entry = sh.getEntryAtIndex(i, false);
+          if (entry && entry.URI.spec == spec) {
+            nav.gotoIndex(i);
+            return;
+          }
+        }
+      }
 
-			// store, so that we later may retry
-			this._known[spec] = [num, browser, now];
-		}
-		let nav = browser.webNavigation;
-		nav.loadURI(spec, this._flags, nav.referringURI, null, null);
-	},
+      // Regular navigation
+      gotoLink(spec, content.selectedBrowser);
+    }
+    catch (ex) {
+      log(ex);
+    }
+  }
 
-	// load handler doing the post-processing
-	// right now this includes error handling/re-trying
-	load: function(evt) FastPrevNext._load(evt),
-	_load: function(evt) {
-		let loc = evt.originalTarget.location.toString();
-		if (!(loc in this._known)) {
-			return;
-		}
-		let [num, browser] = this._known[loc];
-		delete this._known[loc];
+  function gotoLink(spec, browser) {
+    // when we have a leading zero then we may later want to re-try without it.
+    let m = spec.match(RE_NUMERIC);
+    if (!checkEnableMetaLinks() && m[1].match(/^0/)) {
+      let now = Date.now();
 
-		if (!browser) {
-			return;
-		}
+      // some garbage collection
+      let cut = now - 900;
+      for (let x in known) {
+        if (known[x][2] < cut) {
+          delete known[x][2];
+        }
+      }
 
-		// error checking
-		let error = false;
-		try {
-			// check for http 40x
-			if (browser.docShell && browser.docShell.currentDocumentChannel && (browser.docShell.currentDocumentChannel instanceof Ci.nsIHttpChannel)) {
-				let http = browser.docShell.currentDocumentChannel.QueryInterface(Ci.nsIHttpChannel);
-				error = (http.responseStatus % 100) == 4;
-			}
-			// XXX: check for neterror as well?
-		}
-		catch (ex) {
-			this.log(ex);
-		}
-		if (!error) {
-			return;
-		}
+      // store, so that we later may retry
+      known[spec] = [num, browser, now];
+    }
+    let nav = browser.webNavigation;
+    nav.loadURI(spec, LOAD_FLAGS, nav.referringURI, null, null);
+  }
 
-		num = num.replace(/^0/, '');
-		spec = loc.replace(this._pattern, num + '$2');
-		if (spec != loc) {
-			this._goto(spec, num, browser);
-		}
-		return true;
-	},
+  function loadPage(evt) {
+    let loc = evt.originalTarget.location.toString();
+    if (!(loc in known)) {
+      return;
+    }
 
-	next: function(evt) {
-		this._move(1, evt.button == 1);
-	},
-	prev: function(evt) {
-		this._move(-1, evt.button == 1);
-	}
-};
+    let [num, browser] = known[loc];
+    delete known[loc];
 
-// add this so that we can later post-process
-(function() {
-	function $(id) document.getElementById(id);
-	
-	addEventListener('DOMContentLoaded', FastPrevNext.load, true);
-	addEventListener('load', function() {
-		removeEventListener('load', arguments.callee, false);
-		FastPrevNext.urlbar.addEventListener('mousemove', FastPrevNext.onMouseEnterUrlbar, true);
-	
-		function wire(item) {
-			let lItem = item.toLowerCase();
-			let uItem = item.toUpperCase();
-			let node = $('FastPrevNext' + item);
-			node.addEventListener("click", function(event) {
-				FastPrevNext[lItem](event);
-			}, true);
-			node.addEventListener("mouseover", function(event) {
-				FastPrevNext.setPreviewLink(event, FastPrevNext[uItem]);
-			}, true);
-			node.addEventListener("mouseout", function(event) {
-				FastPrevNext.setPreviewLink(event, FastPrevNext.CLEAR);
-			}, true);
-		}
-		wire('Prev');
-		wire('Next');
-	}, false);
-})();
+    if (!browser) {
+      return;
+    }
+
+    try {
+      // check for http 40x
+      if (browser.docShell && browser.docShell.currentDocumentChannel && (browser.docShell.currentDocumentChannel instanceof Ci.nsIHttpChannel)) {
+        let http = browser.docShell.currentDocumentChannel.QueryInterface(Ci.nsIHttpChannel);
+        if ((http.responseStatus % 100) != 4) {
+          return;
+        }
+      }
+      // XXX: check for neterror as well?
+    }
+    catch (ex) {
+      log(ex);
+    }
+
+    num = num.replace(/^0/, '');
+    spec = loc.replace(RE_NUMERIC, num + '$2');
+    if (spec != loc) {
+      gotoLink(spec, num, browser);
+    }
+  }
+
+  function moveNext(evt) {
+    moveTo(NEXT, evt.button == 1);
+  }
+  function movePrev(evt) {
+    moveTo(PREV, evt.button == 1);
+  }
+
+  window.addEventListener('DOMContentLoaded', loadPage, true);
+  urlbar.addEventListener('mousemove', checkEnable, true);
+
+  let node = $('FastPrevNextPrev');
+  node.addEventListener("click", movePrev, true);
+  node.addEventListener(
+    "mouseover",
+    function(event) setPreviewLink(event, PREV),
+    true
+    );
+  node.addEventListener(
+    "mouseout",
+    function(event) setPreviewLink(event, CLEAR),
+    true
+    );
+  node = $('FastPrevNextNext');
+  node.addEventListener("click", moveNext, true);
+  node.addEventListener(
+    "mouseover",
+    function(event) setPreviewLink(event, NEXT),
+    true
+    );
+  node.addEventListener(
+    "mouseout",
+    function(event) setPreviewLink(event, CLEAR),
+    true
+    );
+
+} // main
