@@ -50,7 +50,14 @@ const NEXT = 1;
 const RE_NUMERIC = /(\d+)([^\d]*?)$/;
 const LOAD_FLAGS = Ci.nsIWebNavigation.LOAD_FLAGS_NONE;
 
-function buildNum(rv, digits) {
+/**
+ * Format an integer according to the number of digits given
+ *
+ * @usage formatNumber(1, 3) == "003"
+ * @param {Number} rv Number to format
+ * @param {Number} digits [Optional] Number of digits to use
+ */
+function formatNumber(rv, digits) {
   rv = rv.toString();
   if (typeof(digits) != 'number') {
     digits = 3;
@@ -61,6 +68,9 @@ function buildNum(rv, digits) {
   return rv;
 }
 
+/**
+ * Module Entry Point
+ */
 function main(window) {
   let known = {};
 
@@ -71,11 +81,17 @@ function main(window) {
   let urlbar = $('urlbar');
   let content = $('content');
 
+  /**
+   * Enables or disables the UI elements
+   */
   function setEnabled(nv) {
     nv = !!nv;
     urlbar.setAttribute('_FastPrevNext_enabled', nv.toString());
   }
 
+  /**
+   * Checks for valid meta-data links
+   */
   function checkEnableMetaLinks() {
     let links = content.contentDocument.querySelectorAll('head > link');
     return Array.some(
@@ -83,6 +99,10 @@ function main(window) {
       function(e) ['next', 'previous'].indexOf(e.rel) != -1
       );
   }
+
+  /**
+   * Checks if sequencing could be applied
+   */
   function checkEnableURIMatching() {
     if (!content.webNavigation || !content.webNavigation.currentURI) {
       return;
@@ -90,10 +110,16 @@ function main(window) {
     let match = content.webNavigation.currentURI.spec.match(RE_NUMERIC);
     return match != null && parseInt(match[1], 10) > 0;
   }
-  function checkEnable() setEnabled(checkEnableMetaLinks() || checkEnableURIMatching());
 
-  // XXX: post-processing (error fixups) not implemented
+  /**
+   * Open a link in a new tab
+   *
+   * @usage openNewTab("http//example.org/")
+   * @param {string} link URL to open
+   * @param {nsIURI} ref [Optional] Referrer URI
+   */
   function openNewTab(link, ref) {
+    // XXX: post-processing (error fixups) not implemented
     try {
       if ('delayedOpenTab' in window) {
         window.delayedOpenTab(link, ref);
@@ -106,21 +132,36 @@ function main(window) {
       log("failed to open link" + ex);
     }
   }
-  function setPreviewLink(event, dest) {
+
+  /**
+   * Display or hide a preview link
+   *
+   * @usage setPreviewLink(event, "http://example.org/")
+   * @usage setPreviewLink()
+   * @param {Event} event [Optional] Event leading to the invocation
+   * @param {Number} dir [Optional] Direction relative to current location or 0 (hide link)
+   */
+  function setPreviewLink(event, dir) {
     if (!XULBrowserWindow) {
       return;
     }
     XULBrowserWindow.setOverLink(
-      dest ? getDestUrl(dest) : "",
+      dest ? getDestUrl(dir) : "",
       null);
   }
 
+  /**
+   * Compute destination based on the current location
+   *
+   * @param {Number} dir Directory to go
+   */
   function getDestUrl(dir) {
     let links = content.contentDocument.querySelectorAll('head > link');
-    for (var i in links) {
-      if ((dir == NEXT && links[i].rel == 'next')
-          || (dir == PREV && links[i].rel == 'previous'))
-        return links[i].href;
+    for each (var l in links) {
+      if ((dir == NEXT && l.rel == 'next')
+          || (dir == PREV && l.rel == 'previous')) {
+        return l.href;
+      }
     }
 
     let nav = content.webNavigation;
@@ -130,15 +171,22 @@ function main(window) {
       return null;
     }
     num = parseInt(m[1], 10) + dir;
-    num = buildNum(num, m[1].length);
+    num = formatNumber(num, m[1].length);
     return spec.replace(RE_NUMERIC, num + '$2');
   }
 
-  function moveTo(v, newTab) {
+  /**
+   * Move in URL sequence.
+   * This might utialize browser history to navigate
+   *
+   * @param {Number} dir Direction
+   * @param {Boolean} newTab Open in a new Tab
+   */
+  function moveTo(dir, newTab) {
     try {
       let nav = content.webNavigation;
 
-      let spec = getDestUrl(v);
+      let spec = getDestUrl(dir);
       if (!spec) {
         return;
       }
@@ -168,6 +216,12 @@ function main(window) {
     }
   }
 
+  /**
+   * Go to a link, using a specific browser and without involving history
+   *
+   * @param {String} spec URI to move to
+   * @param {Element} browser Browser element to operate on
+   */
   function gotoLink(spec, browser) {
     // when we have a leading zero then we may later want to re-try without it.
     let m = spec.match(RE_NUMERIC);
@@ -189,6 +243,10 @@ function main(window) {
     nav.loadURI(spec, LOAD_FLAGS, nav.referringURI, null, null);
   }
 
+  /**
+   * Event-Listener: Page loading.
+   * Will check for failures and re-navigate if possible
+   */
   function loadPage(evt) {
     let loc = evt.originalTarget.location.toString();
     if (!(loc in known)) {
@@ -223,15 +281,22 @@ function main(window) {
     }
   }
 
-  function moveNext(evt) {
-    moveTo(NEXT, evt.button == 1);
-  }
-  function movePrev(evt) {
-    moveTo(PREV, evt.button == 1);
-  }
+  /**
+   * Event-Listener: Updates the UI elements according to possible sequencing
+   */
+  function updateEnabled() setEnabled(checkEnableMetaLinks() || checkEnableURIMatching());
+
+  /**
+   * Event-Listener: Move to next
+   */
+  function moveNext(evt) moveTo(NEXT, evt.button == 1);
+  /**
+   * Event-Listener: Move to previous
+   */
+  function movePrev(evt) moveTo(PREV, evt.button == 1);
 
   content.addEventListener("load", loadPage, true);
-  urlbar.addEventListener("mousemove", checkEnable, true);
+  urlbar.addEventListener("mousemove", updateEnabled, true);
 
   let node = $("FastPrevNextPrev");
   node.addEventListener("click", movePrev, true);
