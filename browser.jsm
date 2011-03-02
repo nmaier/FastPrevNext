@@ -248,6 +248,9 @@ function main(window) {
    * Will check for failures and re-navigate if possible
    */
   function loadPage(evt) {
+    if (!evt.originalTarget || !evt.originalTarget.location) {
+      return;
+    }
     let loc = evt.originalTarget.location.toString();
     if (!(loc in known)) {
       return;
