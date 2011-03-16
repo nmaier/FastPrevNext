@@ -248,14 +248,17 @@ function main(window) {
    * Will check for failures and re-navigate if possible
    */
   function loadPage(evt) {
-    if (!evt.originalTarget || !evt.originalTarget.location) {
+    let loc;
+    try {
+      loc = evt.target.location.toString();
+      if (!(loc in known)) {
+        return;
+      }
+    }
+    catch (ex) {
+      // location threw; might not be available
       return;
     }
-    let loc = evt.originalTarget.location.toString();
-    if (!(loc in known)) {
-      return;
-    }
-
     let [num, browser] = known[loc];
     delete known[loc];
 
