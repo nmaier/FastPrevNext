@@ -38,7 +38,6 @@ registerOverlay(
     function $$$(q) document.querySelectorAll(q);
 
     let ss = document.createProcessingInstruction("xml-stylesheet", "href='chrome://fastprevnext/skin/' type='text/css'");
-    ss.contexts = [];
     document.documentElement.parentNode.insertBefore(ss, document.documentElement);
     unloadWindow(window, function() ss.parentNode.removeChild(ss));
 
