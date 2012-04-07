@@ -7,14 +7,15 @@ from zipfile import ZipFile, ZIP_STORED, ZIP_DEFLATED
 resources = [
     "install.rdf",
     "chrome.manifest",
-    "*.xul",
+    "*.xul", "*.css",
     "locale/*/*.dtd",
     "locale/*/*.properties",
     "defaults/preferences/prefs.js",
     "icon.png", "icon64.png",
+    "arrows.png",
     "LICENSE"
     ]
-destination = "extension.xpi"
+destination = "fastprevnext.xpi"
 
 def get_js_requires(scripts):
     known = set()

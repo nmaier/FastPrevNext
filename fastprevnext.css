@@ -1,0 +1,22 @@
+@namespace url(http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul);
+
+.fastprevnextbutton {
+	-moz-appearance: none;
+	list-style-image: url(chrome://fastprevnext/skin/arrows.png);
+	visibility: collapse;
+	padding: 0 2px !important;
+}
+#FastPrevNextPrev  {
+	-moz-image-region: rect(0px, 16px, 16px, 0px);
+	padding-right: 0 !important;
+	margin-right: 0;
+}
+#FastPrevNextNext  {
+	-moz-image-region: rect(0px, 32px, 16px, 16px);
+	padding-left: 0 !important;
+	margin-left: 0;
+}
+
+#urlbar:hover[_FastPrevNext_enabled="true"] .fastprevnextbutton  {
+	visibility: visible !important;
+}
