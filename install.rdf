@@ -8,12 +8,12 @@
     <em:name>FastPrevNext</em:name>
     <em:description>Easily browse through sequenced pages</em:description>
     <em:version>6</em:version>
+    <em:creator>Nils Maier</em:creator>
+    <em:developer>Nils Maier</em:developer>
 
     <em:bootstrap>true</em:bootstrap>
     <em:type>2</em:type>
 
-    <em:creator>Nils Maier</em:creator>
-    <em:developer>Nils Maier</em:developer>
 
     <!-- Firefox -->
     <em:targetApplication>
