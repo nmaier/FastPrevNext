@@ -50,7 +50,7 @@ function main(window, document) {
       urlbar.setAttribute("_FastPrevNext_enabled", nv.toString());
     }
     function checkEnableMetaLinks() {
-      let links = content.contentDocument.querySelectorAll("head > link");
+      let links = content.contentDocument.querySelectorAll("head > link[rel]");
       return Array.some(links, function(l) l.rel == "next" || l.rel == "previous");
     }
     function checkEnableURIMatching() {
@@ -75,7 +75,7 @@ function main(window, document) {
       }
     }
     function getDestURI(dir) {
-      let links = content.contentDocument.querySelectorAll("head > link");
+      let links = content.contentDocument.querySelectorAll("head > link[rel]");
       for (let i = 0, e = links.length; i != e; ++i) {
         let l = links[i];
         if ((dir == NEXT && l.rel == "next") || (dir == PREV && l.rel == "previous")) {
