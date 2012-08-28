@@ -114,9 +114,9 @@ function main(window, document) {
         }
 
         // Already in history?
-        let sh = nav.sessionHistor;
+        let sh = nav.sessionHistory;
         if (sh && sh.count > 1) {
-          for (let i = sh.count - 1; i >= 0; --i) {
+          for (let i = sh.count; ~(--i); ) {
             let entry = sh.getEntryAtIndex(i, false);
             if (entry && entry.URI.spec == spec) {
               nav.gotoIndex(i);
