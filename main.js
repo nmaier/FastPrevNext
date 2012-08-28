@@ -98,14 +98,17 @@ function main(window, document) {
       dir = event.type == "mouseout" ? CLEAR : dir;
       window.XULBrowserWindow.setOverLink(dir ? getDestURI(dir) : "", null);
     }
-    function moveTo(dir, newTab) {
+    function moveTo(dir, button) {
+      if (button == 2) {
+        return;
+      }
       try {
         let nav = content.webNavigation;
         let spec = getDestURI(dir);
         if (!spec) {
           throw new Error("Cannot determine next page");
         }
-        if (newTab) {
+        if (button == 1) {
           openNewTab(spec, nav.referringURI);
           return;
         }
@@ -182,8 +185,8 @@ function main(window, document) {
       }
     }
     function updateEnabled() setEnabled(checkEnableMetaLinks() || checkEnableURIMatching());
-    function moveNext(evt) moveTo(NEXT, evt.button == 1);
-    function movePrev(evt) moveTo(PREV, evt.button == 1);
+    function moveNext(evt) moveTo(NEXT, evt.button);
+    function movePrev(evt) moveTo(PREV, evt.button);
 
     content.addEventListener("DOMContentLoaded", loadPage, true);
     urlbar.addEventListener("mousemove", updateEnabled, true);
