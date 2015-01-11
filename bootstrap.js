@@ -8,7 +8,7 @@ const global = this;
 function install() {}
 function uninstall() {}
 function startup(data) {
-  // will unload itself 
+  // will unload itself
   Components.utils.import("chrome://fastprevnext/content/loader.jsm");
   _setupLoader(data, function real_startup() {
     require("main");

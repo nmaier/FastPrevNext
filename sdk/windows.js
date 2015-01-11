@@ -3,20 +3,19 @@
  * You can obtain one at http://mozilla.org/MPL/2.0/. */
 "use strict";
 
-const global = this;
-
-Instances.register("XHR", "@mozilla.org/xmlextras/xmlhttprequest;1", "nsIXMLHttpRequest");
+Instances.register("XHR",
+                   "@mozilla.org/xmlextras/xmlhttprequest;1",
+                   "nsIXMLHttpRequest");
 
 /**
  * Specialized unloader that will trigger whenever either the window gets
  * unloaded or the add-on is shut down
  */
 exports.unloadWindow = function unloadWindow(window, fn) {
-  let args = arguments;
   let handler = unload(function() {
     window.removeEventListener('unload', handler, false);
     try {
-      fn.apply(null, args);
+      fn();
     }
     catch (ex) {
       log(LOG_ERROR, "failed to run window unloader", ex);
@@ -51,7 +50,8 @@ exports.watchWindows = function watchWindows(location, callback) {
         watcher(window);
       }
       else {
-        log(LOG_DEBUG, "skipping window: " + window.location + " as another location was requested: " + location);
+        log(LOG_DEBUG, "skipping window: " + window.location +
+            " as another location was requested: " + location);
       }
     }, false);
   }
@@ -66,7 +66,8 @@ exports.watchWindows = function watchWindows(location, callback) {
         watcher(window);
       }
       else {
-        log(LOG_DEBUG, "skipping early window: " + window.location + " as another location was requested: " + location);
+        log(LOG_DEBUG, "skipping early window: " + window.location +
+            " as another location was requested: " + location);
       }
     }
     // Wait for the window to load before continuing
@@ -77,13 +78,14 @@ exports.watchWindows = function watchWindows(location, callback) {
 
   // Watch for new browser windows opening then wait for it to load
   function windowWatcher(subject, topic) {
-    if (topic == "domwindowopened")
+    if (topic == "domwindowopened") {
       runOnLoad(subject);
+    }
   }
   Services.ww.registerNotification(windowWatcher);
 
   // Make sure to stop watching for windows if we're unloading
-  unload(function() Services.ww.unregisterNotification(windowWatcher));
+  unload(() => Services.ww.unregisterNotification(windowWatcher));
 };
 
 /**
@@ -91,8 +93,12 @@ exports.watchWindows = function watchWindows(location, callback) {
  */
 exports.registerOverlay = function registerOverlay(src, location, callback) {
   function inject(xul, window, document) {
-    function $(id) document.getElementById(id);
-    function $$(q) document.querySelector(q);
+    function $(id) {
+      return document.getElementById(id);
+    }
+    function $$(q) {
+      return document.querySelector(q);
+    }
 
     // loadOverlay for the poor
     function addNode(target, node) {
@@ -103,9 +109,9 @@ exports.registerOverlay = function registerOverlay(src, location, callback) {
         }
         let places = nn.getAttribute(attr)
           .split(',')
-          .map(function(p) p.trim())
-          .filter(function(p) !!p);
-        for each (let p in places) {
+          .map(p => p.trim())
+          .filter(p => !!p);
+        for (let p of places) {
           let pn = $$('#' + target.id + ' > #' + p);
           if (!pn) {
             continue;
@@ -120,8 +126,10 @@ exports.registerOverlay = function registerOverlay(src, location, callback) {
       let nn = document.importNode(node, true);
 
       // try to insert according to insertafter/before
-      if (insertX(nn, 'insertafter', function(pn) pn.parentNode.insertBefore(nn, pn.nextSibling))
-        || insertX(nn, 'insertbefore', function(pn) pn.parentNode.insertBefore(nn, pn))) {
+      if (insertX(nn, 'insertafter',
+                  pn => pn.parentNode.insertBefore(nn, pn.nextSibling)) ||
+          insertX(nn, 'insertbefore',
+                  pn => pn.parentNode.insertBefore(nn, pn))) {
       }
       // just append
       else {
@@ -149,14 +157,12 @@ exports.registerOverlay = function registerOverlay(src, location, callback) {
             continue;
           }
           let nn = addNode(target, n);
-          unloaders.push(function() nn.parentNode.removeChild(nn));
+          unloaders.push(() => nn.parentNode.removeChild(nn));
         }
       }
-      let _unloader
-
       // install per-window unloader
       if (unloaders.length) {
-        exports.unloadWindow(window, function() unloaders.forEach(function(u) u()));
+        exports.unloadWindow(window, () => unloaders.forEach(u => u()));
       }
 
       callback && callback(window, document);
@@ -170,9 +176,10 @@ exports.registerOverlay = function registerOverlay(src, location, callback) {
   _r.onload = function() {
     log(LOG_DEBUG, "loaded: " + src);
     let document = _r.responseXML;
- 
+
     // clean the document a bit
-    let emptyNodes = document.evaluate("//text()[normalize-space(.) = '']", document, null, 7, null);
+    let emptyNodes = document.evaluate(
+      "//text()[normalize-space(.) = '']", document, null, 7, null);
     for (let i = 0, e = emptyNodes.snapshotLength; i < e; ++i) {
       let n = emptyNodes.snapshotItem(i);
       n.parentNode.removeChild(n);
