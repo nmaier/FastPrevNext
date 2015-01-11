@@ -4,6 +4,7 @@
 "use strict";
 
 const {registerOverlay, unloadWindow} = require("sdk/windows");
+const {Task} = Cu.import("resource://gre/modules/Task.jsm", {});
 
 const PREV = -1;
 const CLEAR = 0;
@@ -30,28 +31,43 @@ function formatNumber(rv, digits) {
 }
 
 function main(window, document) {
-  function $(id) document.getElementById(id);
-  function $$(q) document.querySelector(q);
-  function $$$(q) document.querySelectorAll(q);
+  function $(id) {
+    return document.getElementById(id);
+  }
 
-  let ss = document.createProcessingInstruction("xml-stylesheet", "href='chrome://fastprevnext/skin/' type='text/css'");
-  document.documentElement.parentNode.insertBefore(ss, document.documentElement);
-  unloadWindow(window, function() ss.parentNode.removeChild(ss));
+  const {gBrowser} = window;
+
+  let ss = document.createProcessingInstruction(
+    "xml-stylesheet", "href='chrome://fastprevnext/skin/' type='text/css'");
+  document.documentElement.parentNode.insertBefore(ss,
+                                                   document.documentElement);
+  unloadWindow(window, () => ss.parentNode.removeChild(ss));
 
   let urlbar = $("urlbar");
   let content = $("content");
 
   let known = Object.create(null);
-  unloadWindow(window, function() known = null);
+  unloadWindow(window, () => known = null);
 
   (function() {
     function setEnabled(nv) {
       nv = !!nv;
       urlbar.setAttribute("_FastPrevNext_enabled", nv.toString());
     }
-    function checkEnableMetaLinks() {
-      let links = content.contentDocument.querySelectorAll("head > link[rel]");
-      return Array.some(links, function(l) l.rel == "next" || l.rel == "previous");
+    function getMetaLinks() {
+      return new Promise(function(r) {
+        let mm = gBrowser.selectedBrowser.messageManager;
+        let cb = m => {
+          mm.removeMessageListener("fastprevnext:meta", cb);
+          r(m.data);
+        };
+        mm.addMessageListener("fastprevnext:meta", cb);
+        mm.sendAsyncMessage("fastprevnext:meta");
+      });
+    }
+    function* checkEnableMetaLinks() {
+      let links = yield getMetaLinks();
+      return Array.some(links, l => l.rel == "next" || l.rel == "previous");
     }
     function checkEnableURIMatching() {
       if (!content.webNavigation || !content.webNavigation.currentURI) {
@@ -74,11 +90,12 @@ function main(window, document) {
         log(LOG_ERROR, "failed to open link", ex);
       }
     }
-    function getDestURI(dir) {
-      let links = content.contentDocument.querySelectorAll("head > link[rel]");
+    function* getDestURI(dir) {
+      let links = yield getMetaLinks();
       for (let i = 0, e = links.length; i != e; ++i) {
         let l = links[i];
-        if ((dir == NEXT && l.rel == "next") || (dir == PREV && l.rel == "previous")) {
+        if ((dir == NEXT && l.rel == "next") ||
+            (dir == PREV && l.rel == "previous")) {
           return l.href;
         }
       }
@@ -96,77 +113,73 @@ function main(window, document) {
         return;
       }
       dir = event.type == "mouseout" ? CLEAR : dir;
-      window.XULBrowserWindow.setOverLink(dir ? getDestURI(dir) : "", null);
+      if (!dir) {
+        window.XULBrowserWindow.setOverLink("", null);
+        return;
+      }
+      Task.spawn(function*() {
+        window.XULBrowserWindow.setOverLink((yield getDestURI(dir)), null);
+      });
     }
     function moveTo(dir, button) {
       if (button == 2) {
         return;
       }
-      try {
-        let nav = content.webNavigation;
-        let spec = getDestURI(dir);
-        if (!spec) {
-          throw new Error("Cannot determine next page");
-        }
-        if (button == 1) {
-          openNewTab(spec, nav.referringURI);
-          return;
-        }
+      Task.spawn(function*() {
+        try {
+          let spec = yield getDestURI(dir);
+          if (!spec) {
+            throw new Error("Cannot determine next page");
+          }
+          if (button == 1) {
+            openNewTab(spec, content.webNavigation.referringURI);
+            return;
+          }
 
-        // Already in history?
-        let sh = nav.sessionHistory;
-        if (sh && sh.count > 1) {
-          for (let i = sh.count; ~(--i); ) {
-            let entry = sh.getEntryAtIndex(i, false);
-            if (entry && entry.URI.spec == spec) {
-              nav.gotoIndex(i);
-              return;
+          // Already in history?
+          // XXX This yields unsafe CPOW atm.
+          // However, same happens in the browser.
+          // Waiting for Nightly to settle on something, before addressing
+          // This stuff is written a bit insanely in order to avoid generating
+          // too many unique messages in the console
+          let sh = content.webNavigation.sessionHistory;
+          let count = 0;
+          if (sh && (count = sh.count) > 1) {
+            for (let i = count; ~(--i);) {
+              if (sh.getEntryAtIndex(i, false).URI.spec == spec) { content.webNavigation.gotoIndex(i); return; }
             }
           }
-        }
 
-        // Regular navigation
-        gotoLink(spec, content.selectedBrowser);
-      }
-      catch (ex) {
-        log(LOG_ERROR, "failed to navigate", ex);
-      }
+          // Regular navigation
+          gotoLink(spec, content.selectedBrowser);
+        }
+        catch (ex) {
+          log(LOG_ERROR, "failed to navigate", ex);
+        }
+      });
     }
 
     function gotoLink(spec, browser) {
-      let m = spec.match(RE_NUMERIC);
-      if (!checkEnableMetaLinks() && m[1].match(/^0+./)) {
-        let now = Date.now();
-        let cut = now - 5000;
-        for (let x in known) {
-          if (known[x][1] < cut) {
-            delete known[x];
+      Task.spawn(function*() {
+        let m = spec.match(RE_NUMERIC);
+        if (!(yield checkEnableMetaLinks()) && m[1].match(/^0+./)) {
+          let now = Date.now();
+          let cut = now - 5000;
+          for (let x in known) {
+            if (known[x][1] < cut) {
+              delete known[x];
+            }
           }
+          known[spec] = [m[1], now];
         }
-        known[spec] = [m[1], now];
-      }
-      let nav = browser.webNavigation;
-      nav.loadURI(spec, LOAD_FLAGS, nav.referringURI, null, null);
+        let nav = browser.webNavigation;
+        nav.loadURI(spec, LOAD_FLAGS, nav.referringURI, null, null);
+      });
     }
-    function loadPage(evt) {
-      let browser = window.gBrowser.getBrowserForDocument(evt.target);
-      if (!browser) {
-        return;
-      }
-      let chan = browser.docShell.currentDocumentChannel;
-      let loc;
-      try {
-        loc = chan.originalURI.spec;
-        if (chan.URI.spec == chan.originalURI.spec
-            && (!(chan instanceof Ci.nsIHttpChannel) || (chan.responseStatus / 100) < 3)) {
-          log(LOG_DEBUG, "skipping " + loc + " / " + chan.responseStatus);
-          return;
-        }
-      }
-      catch (ex) {
-        log(LOG_DEBUG, "failed to get location", ex);
-        return;
-      }
+    function loadPage(m) {
+      let {loc} = m.data;
+      let {document} = m.objects;
+      let browser = window.gBrowser.getBrowserForDocument(document);
       log(LOG_DEBUG, "processing: " + loc);
       if (!(loc in known)) {
         log(LOG_DEBUG, loc + " not in " + Object.keys(known));
@@ -184,11 +197,21 @@ function main(window, document) {
         gotoLink(spec, browser);
       }
     }
-    function updateEnabled() setEnabled(checkEnableMetaLinks() || checkEnableURIMatching());
-    function moveNext(evt) moveTo(NEXT, evt.button);
-    function movePrev(evt) moveTo(PREV, evt.button);
+    function updateEnabled() {
+      Task.spawn(function*() {
+        setEnabled(checkEnableURIMatching() || (yield checkEnableMetaLinks()));
+      });
+    }
+    function moveNext(evt) {
+      moveTo(NEXT, evt.button);
+    }
+    function movePrev(evt) {
+      moveTo(PREV, evt.button);
+    }
 
-    content.addEventListener("DOMContentLoaded", loadPage, true);
+    window.messageManager.addMessageListener("fastprevnext:loaded", loadPage);
+    let fs = "chrome://fastprevnext/content/content-script.js?" + (+new Date());
+    window.messageManager.loadFrameScript(fs, true);
     urlbar.addEventListener("mousemove", updateEnabled, true);
 
     let nodePrev = $("FastPrevNextPrev");
@@ -204,7 +227,11 @@ function main(window, document) {
     nodeNext.addEventListener("mouseout", setPreviewLinkNext, true);
 
     unloadWindow(window, function() {
-      content.removeEventListener("DOMContentLoaded", loadPage, true);
+      window.messageManager.removeDelayedFrameScript(fs);
+      window.messageManager.removeMessageListener("fastprevnext:loaded",
+                                                  loadPage);
+      window.messageManager.broadcastAsyncMessage("fastprevnext:shutdown");
+
       urlbar.removeEventListener("mousemove", updateEnabled, true);
       nodePrev.removeEventListener("click", movePrev, true);
       nodePrev.removeEventListener("mouseover", setPreviewLinkPrev, true);
@@ -212,7 +239,8 @@ function main(window, document) {
       nodeNext.removeEventListener("click", moveNext, true);
       nodeNext.removeEventListener("mouseover", setPreviewLinkNext, true);
       nodeNext.removeEventListener("mouseout", setPreviewLinkNext, true);
-      content = urlbar = nodePrev = nodeNext = setPreviewLinkPrev = setPreviewLinkNext = null;
+      content = urlbar = nodePrev = nodeNext = setPreviewLinkPrev =
+        setPreviewLinkNext = null;
     });
   })();
   log(LOG_INFO, "all good!");

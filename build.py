@@ -18,7 +18,8 @@ resources = [
     "defaults/preferences/prefs.js",
     "icon.png", "icon64.png",
     "arrows.png",
-    "LICENSE.txt"
+    "LICENSE.txt",
+    "content-script.js"
     ]
 destination = "fastprevnext.xpi"
 
