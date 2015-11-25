@@ -9,14 +9,14 @@
       id="FastPrevNextPrev"
       style="-moz-user-focus: none;"
       class="plain urlbar-icon fastprevnextbutton"
-      insertbefore="star-button"
+      insertbefore="page-report-button,star-button"
       tooltiptext="&fastprevnext.prev;"
     />
     <image
       id="FastPrevNextNext"
       style="-moz-user-focus: none;"
       class="plain urlbar-icon fastprevnextbutton"
-      insertbefore="star-button"
+      insertbefore="page-report-button,star-button"
       tooltiptext="&fastprevnext.next;"
     />
   </hbox>

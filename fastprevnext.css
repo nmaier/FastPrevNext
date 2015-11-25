@@ -3,6 +3,7 @@
 .fastprevnextbutton {
 	-moz-appearance: none;
 	list-style-image: url(chrome://fastprevnext/skin/arrows.png);
+	width: 16px !important;
 	visibility: collapse;
 	padding: 0 2px !important;
 }
